@@ -7,6 +7,7 @@ import { useUser } from "@clerk/clerk-react";
 import { Briefcase, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Navigate, useParams } from "react-router-dom";
+import { useToast } from "@/components/hooks/use-toast"; // Import the useToast hook
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -27,7 +28,7 @@ const getJob = async (id) => {
 const createJob = async (jobApplication) => {
   const token = await window.Clerk.session.getToken();
 
-  await fetch(`${backendUrl}/jobApplications`, {
+  const res = await fetch(`${backendUrl}/jobApplications`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -35,13 +36,14 @@ const createJob = async (jobApplication) => {
     },
     body: JSON.stringify(jobApplication),
   });
+  return res;
 };
 
 function JobPage() {
   const [job, setJob] = useState(null);
   const params = useParams();
-
   const { isLoaded, isSignedIn, user } = useUser();
+  const { toast } = useToast(); // Initialize the useToast hook
 
   useEffect(() => {
     getJob(params.id)
@@ -51,9 +53,13 @@ function JobPage() {
       })
       .catch((err) => {
         console.log(err);
-      })
-      .finally(() => {});
-  }, [params]);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch job details. Please try again.",
+        });
+      });
+  }, [params, toast]);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -62,15 +68,40 @@ function JobPage() {
     a3: "",
   });
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     console.log(formData);
-    createJob({
-      fullName: formData.fullName,
-      answers: [formData.a1, formData.a2, formData.a3],
-      job: params.id,
-      userId: user.id,
-    });
+    try {
+      const res = await createJob({
+        fullName: formData.fullName,
+        answers: [formData.a1, formData.a2, formData.a3],
+        job: params.id,
+        userId: user.id,
+      });
+
+      if (res.ok) {
+        toast({
+          variant: "success",
+          title: "Success",
+          description: "Job application submitted successfully!",
+        });
+        setFormData({
+          fullName: "",
+          a1: "",
+          a2: "",
+          a3: "",
+        });
+      } else {
+        throw new Error("Failed to submit job application");
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to submit job application. Please try again.",
+      });
+    }
   };
 
   if (!isLoaded) {
@@ -159,14 +190,19 @@ function JobPage() {
           </Button>
           <Button
             type="button"
-            onClick={() =>
+            onClick={() => {
               setFormData({
                 fullName: "",
                 a1: "",
                 a2: "",
                 a3: "",
-              })
-            }
+              });
+              toast({
+                variant: "info",
+                title: "Form Cleared",
+                description: "The form has been cleared.",
+              });
+            }}
             className="w-fit"
             variant="outline"
           >
