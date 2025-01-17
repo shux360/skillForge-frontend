@@ -8,10 +8,12 @@ import { Briefcase, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Navigate, useParams } from "react-router-dom";
 
+const backendUrl = import.meta.env.BACKEND_URL;
+
 const getJob = async (id) => {
   const token = await window.Clerk.session.getToken();
 
-  const res = await fetch(`http://localhost:8000/jobs/${id}`, {
+  const res = await fetch(`${backendUrl}/jobs/${id}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -24,7 +26,7 @@ const getJob = async (id) => {
 const createJob = async (jobApplication) => {
   const token = await window.Clerk.session.getToken();
 
-  await fetch(`http://localhost:8000/jobApplications`, {
+  await fetch(`${backendUrl}/jobApplications`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
